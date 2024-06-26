@@ -9,6 +9,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
 import numpy as np
 import time
+from shapvalues import ShapleyEstimator
 
 def training_test_performance_experiment(X,y,missing_rate,run_time):
     """
@@ -182,14 +183,13 @@ def run_performance_experiment(X, y, missing_rate, runtime, missing_id):
   return res
 
 def shapley_values_experiment(model, X_train, X_test):
-   import shap
    """Return:
         Dictionary: key - class
                     value - average of shapley values of subsamples which are predicted to key value"""
    pred = model.predict(X_test)
    # Create an instance of ShapleyEstimator
-   shapley_estimator = shap.KernelExplainer(model.predict_proba, X_train)
-   explanation = shapley_estimator.shap_values(X_test)
+   shapley_estimator = ShapleyEstimator(model.predict_proba, X_train)
+   explanation = shapley_estimator.shapley_values_arrays(X_test)
 
    return explanation, pred
 
