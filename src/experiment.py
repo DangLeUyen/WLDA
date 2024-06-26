@@ -188,7 +188,7 @@ def shapley_values_experiment(model, X_train, X_test):
                     value - average of shapley values of subsamples which are predicted to key value"""
    pred = model.predict(X_test)
    # Create an instance of ShapleyEstimator
-   shapley_estimator = ShapleyEstimator(model.predict_proba, X_train)
+   shapley_estimator = ShapleyEstimator(model, X_train)
    explanation = shapley_estimator.shapley_values_arrays(X_test)
 
    return explanation, pred

@@ -3,21 +3,18 @@ from itertools import product
 from math import factorial
 
 class ShapleyEstimator:
-    def __init__(self, model, X, y):
+    def __init__(self, model, X):
         """
         Initializes the ShapleyEstimator with a trained model and dataset.
         
         Parameters:
         - model: Trained machine learning model.
         - X: numpy.ndarray containing the feature data.
-        - y: Array containing the target values.
         """
         self.model = model
         self.p = X.shape[1]
         self.X = X
-        self.y = y
         self.mean_values = np.nanmean(X, axis=0)
-        self.num_class = len(np.unique(y))
         
 
     def predict(self, X):
