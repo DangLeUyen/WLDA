@@ -7,7 +7,25 @@ Weighted missing Linear Discriminant Analysis (WLDA): an algorithm can effective
 
 ## 2. Repository Contents
 The codes are structured as follows:
-In /src folders:
-
-
- 
+```
+.
+├── src                    
+│   ├── results               # Directory for storing experimental results
+│   ├── __init__.py           
+│   ├── dper.py           
+│   ├── experiment.py
+│   ├── funcs.py
+│   ├── loaddata.py
+│   ├── main.py
+│   ├── mylda.py
+│   ├── plot.py
+│   ├── shapvalues.py
+│   ├── showresults.py           
+│   └── wlda.py             
+└── README.md
+```
+In `/src` folders: 
+- `mylda.py` contains the implementation of the LDA (Linear Discriminant Analysis) algorithm.
+- `wlda.py` contains the implementation of the WLDA (Weighted Linear Discriminant Analysis) algorithm.
+- `dpers.py` implements the DPER algorithm for computing the covariance matrix used in the WLDA.
+- `shapvalues.py` calculates Shapley values. Shapley values are a method from cooperative game theory applied in machine learning to explain the prediction of a model by attributing the outcome to different features.
