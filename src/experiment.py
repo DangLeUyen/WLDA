@@ -183,7 +183,6 @@ def run_performance_experiment(X, y, missing_rate, runtime, missing_id):
   return res
 
 def shapley_values_experiment(model, X_train, X_test):
-   import shap
    """Return:
         Dictionary: key - class
                     value - average of shapley values of subsamples which are predicted to key value"""
