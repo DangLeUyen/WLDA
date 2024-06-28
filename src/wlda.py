@@ -46,6 +46,25 @@ class WLDA:
       f = lambda r : 1/(1-r)
       w = np.array([f(r)  for r in self.missing_rate_feature])
       return w
+
+   def _weighted_missing_func(self, x):
+      """
+      Compute the weighted missing value for a given data point 'x' for each class.
+      Parameters:
+         x : (numpy.ndarray) The data point being evaluated.
+
+      Returns:
+         numpy.ndarray: covariance matrix with penalized missing data
+      """
+      # Calculate the inverse of covariance matrix
+      pre_mat = np.linalg.inv(self.cov)
+      # Create a mask: 1 - observed value , 0 - missing value
+      mask = ((~np.isnan(x)).astype(int))
+      # Set NaN values to zero
+      x[np.isnan(x)] = 0 
+      # Create a diagonal matrix by multiplying mask and the weight which is calculated from calculate_weight function
+      W = np.diag(mask*self.calculate_weight())
+      return np.matmul(W,np.matmul(pre_mat,W))
    
    def _discriminant_func(self, x):
       """
@@ -56,14 +75,7 @@ class WLDA:
       Returns:
          numpy.ndarray: Discriminant function values for each class.
       """
-      # Calculate the inverse of covariance matrix
-      pre_mat = np.linalg.inv(self.cov)
-      # Create a mask: 1 - observed value , 0 - missing value
-      mask = ((~np.isnan(x)).astype(int))
-      # Set NaN values to zero
-      x[np.isnan(x)] = 0 
-      # Create a diagonal matrix by multiplying mask and the weight which is calculated from calculate_weight function
-      W = np.diag(mask*self.calculate_weight())
+      W = self._weighted_missing_func(x)
       # Initialize an empty list to save the result
       discriminants = []
       # Loop over each class
@@ -73,7 +85,7 @@ class WLDA:
          # Compute the natural logarithm of the prior probability for class 'g'
          prior = np.log(self.priors[g])
          # Compute the discriminant function value for a given data point 'x' for class 'g'
-         discriminant = prior - np.matmul((x-mean_vec),np.matmul(np.matmul(W,np.matmul(pre_mat,W)),(x-mean_vec).T))/2
+         discriminant = prior - np.matmul((x-mean_vec),np.matmul(W,(x-mean_vec).T))/2
          discriminants.append(discriminant)
       return np.array(discriminants)
 
@@ -112,14 +124,14 @@ class WLDA:
 
       return np.array(probas)
    
-   def get_covariance(self):
+   def get_weight_covariance(self, Xtest):
       """
-        Get the covariance matrix
+        Get the weighted covariance matrix for X_test
 
         Returns:
         numpy.ndarray - Covariance matrix
       """
-      return self.cov
+      return np.mean([self._weighted_missing_func(x) for x in Xtest],axis=0)
    
    def get_means(self):
       """

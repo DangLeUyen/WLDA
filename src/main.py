@@ -1,5 +1,5 @@
 from experiment import cov_shap_experiment, run_performance_experiment
-from showresults import show_boundary_similarity, show_accuracy_time
+from showresults import show_accuracy_time, show_wlda_coefs
 from plot import *
 from loaddata import *
 import warnings
@@ -12,6 +12,7 @@ if __name__=='__main__':
     # List of missing data rates used in the experiment
     # Each value represents the percentage of data that is missing in the dataset
     missing_range = [0.15, 0.3, 0.45, 0.6, 0.75]
+    #missing_range = [0.15]
 
     print('Input your request 0 or 1 (0 - performance and 1 - visualization):')
     request_id = input()
@@ -24,20 +25,18 @@ if __name__=='__main__':
         colors = ["#FF165D", "#FFFFFF", "#0A6EBD"]
         class_colors = ["#FF165D", "#A459D1", "#0A6EBD"]
         mse_colors = ["#FFFFFF", "#29ADB2"]
+        swarm_colors = ["#FF165D", "#A459D1", "#0A6EBD", "#3AA6B9"]
 
-        res = dict()
+        shapvalues = dict()
         preds = dict()
         Ss = dict()
         Ms = dict()
 
         for mr in missing_range:
-            Ss[mr], Ms[mr], res[mr], preds[mr] = cov_shap_experiment(X,y,mr)
+            Ss[mr], Ms[mr], shapvalues[mr], preds[mr] = cov_shap_experiment(X,y,mr)
 
         ##### Plot decision boundary cosine similarity #######
-        dbsim_df = show_boundary_similarity(Ss, Ms, y, models, missing_range)
-        dbsim_df = dbsim_df.reset_index()
-
-        boundary_barplot(dbsim_df, missing_range)
+        show_wlda_coefs(Ss, Ms, y, column_names)
 
         ##### Plot covariance heatmaps ########
             # correlation heatmaps
@@ -54,11 +53,8 @@ if __name__=='__main__':
         each_mr_heatmaps(Ss, colors, t='sub_corr')
 
         ##### Plot shapley values #######
-        shapley_feature_importance(res, preds, class_colors, column_names, models)
-
-        shapley_heatmap(res, colors, column_names, models)
-        shapley_heatmap(res, colors, column_names, models, 'class 1')
-        shapley_heatmap(res, colors, column_names, models, 'class 2')
+        wlda_shapley_beewarm(shapvalues, swarm_colors)
+        wlda_feature_importance(shapvalues, class_colors, column_names)
 
     
     else:

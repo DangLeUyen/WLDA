@@ -7,113 +7,98 @@ from collections import defaultdict
 from funcs import convert_cov_to_corr, calculate_SE, calculate_diference
 
 ############ SHAPLEY VALUES ############
+def wlda_shapley_beewarm(res, colors):
 
-def aggregate_shap_class(expldf, pred_y):
-    p = expldf[0].shape[0]
-    class_values = np.unique(pred_y)
-    shapley_values = pd.DataFrame(columns=np.arange(p), index=class_values)
-    for c in class_values:
-        idx = np.where(pred_y == c)[0]
-        class_shap = pd.DataFrame(index = idx, columns = class_values)
-        temp = []
-        for j in range(p):
-            for i in idx:
-                class_shap.loc[i] = expldf[i][j]
-            temp.append(np.abs(class_shap).mean(axis=0)[c])
-        shapley_values.loc[c] = temp
-    return shapley_values
-
-def shapley_feature_importance(res, pred, colors, column_names, algs):
-
+    sns.set(rc = {'axes.facecolor': '#FFFFFF', 'figure.facecolor': '#F1F1F1'})
     # Create a figure with subplots
-    fig, axs = plt.subplots(ncols=6,nrows=5, figsize=(18, 15), sharey=True, sharex=True)
+    fig, axs = plt.subplots(ncols=5,nrows=3, figsize=(20, 9), sharex=True, sharey=True)
+    # Plot each correlation matrix on the appropriate subplot
+    columns=['class 0','class 1', 'class 2']
+    for col, missing_rate in enumerate(res.keys()):
+        matrix = res[missing_rate]['WLDA']
+        f0df = pd.DataFrame(columns=columns)
+        f1df = pd.DataFrame(columns=columns)
+        f2df = pd.DataFrame(columns=columns)
+        f3df = pd.DataFrame(columns=columns)
+        for i in range(30): 
+            f0df.loc[i] = matrix[i][0].tolist()
+            f1df.loc[i] = matrix[i][1].tolist()
+            f2df.loc[i] = matrix[i][2].tolist()
+            f3df.loc[i,:] = matrix[i][3].tolist()
+        f0df['Feature'] = 'sepal length'
+        f1df['Feature'] = 'sepal width'
+        f2df['Feature'] = 'petal length'
+        f3df['Feature'] = 'petal width' 
+        df = pd.concat([f0df, f1df, f2df, f3df], axis=0)
+        for row, label in enumerate(columns):
+            im = sns.swarmplot(x='Feature', y=label, data=df, palette=sns.color_palette(colors,4), 
+                               ax=axs[row, col], hue="Feature", legend=False)
+            axs[row, col].grid(True, which='both', axis='x', color='#F0EBE3')
+            axs[row, col].grid(True, which='both', axis='y', color='#F0EBE3')
+            axs[row, col].set(xlabel=None)
+            axs[row, col].set(ylabel=None)
+            axs[row, col].axhline(y=0, color='#E9A89B', linewidth=1)
+            im.set_yticks([-0.6, -0.3, 0, 0.3, 0.6]) # <--- set the ticks first
+            im.set_yticklabels([-0.6, -0.3, 0, 0.3, 0.6], rotation=0)
+            axs[row, col].set_ylabel(label, rotation=0, fontsize=14, labelpad=20)
+            new_labels = ['Sepal\nLength', 'Sepal\nWidth', 'Petal\nLength', 'Petal\nWidth']
+            axs[row, col].set_xticklabels(new_labels)
+
+
+        axs[0,col].set_title(f'{missing_rate*100}%', rotation='horizontal', fontsize=14)
+    
+    axs[2, 2].set_xlabel('Features', labelpad = 20, fontsize=14)
+
+    # save pic
+    plt.savefig(f'src/results/plots/wlda/wlda_beeswarm.png',dpi=300, bbox_inches='tight')
+    # plot pic
+    #plt.show()
+    plt.close()
+
+def wlda_feature_importance(res, colors, feature_names):
+    palette = colors
+    sns.set()
+    # Create a figure with subplots
+    fig, axs = plt.subplots(ncols=5,nrows=1, figsize=(20, 4), sharey=True, sharex=True)
     fig.patch.set_facecolor('#F1F1F1')
 
     #sns.set(rc = {'axes.facecolor': '#F1F1F1', 'figure.facecolor': '#FFFFFF'})
     # Plot each correlation matrix on the appropriate subplot
-    for row, missing_rate in enumerate(res.keys()):
-        matrix = res[missing_rate]
-        predicteclabels = pred[missing_rate]
-        df = pd.DataFrame(index = algs, columns=['class 0','class 1', 'class 2'])
-        for col, model in enumerate(matrix.keys()):
-            df = aggregate_shap_class(matrix[model], predicteclabels[model])
-            df.columns = column_names
-            df = df.reset_index(names='Label')
-            df['Label'] = 'Class ' + df['Label'].astype(int).astype(str)
-            df_melted = df.melt(id_vars=['Label'], var_name='Feature', value_name='Value')
+    for col, missing_rate in enumerate(res.keys()):
+        matrix = res[missing_rate]['WLDA']
+        df = pd.DataFrame(np.mean(np.abs(matrix), axis=0)).T
+        df.columns = feature_names
+        df = df.reset_index(names='Label')
+        print(df)
+        df['Label'] = 'Class ' + df['Label'].astype(int).astype(str)
+        df_melted = df.melt(id_vars=['Label'], var_name='Feature', value_name='Value')
+        print(df_melted)
+        im = sns.barplot(y='Feature', x='Value', hue='Label', data=df_melted, orient='h', ax=axs[col], 
+                        palette=palette, saturation=100, width=0.8 )
+        axs[col].legend_.remove()
+        axs[col].set(xlabel=None)
+        axs[col].set(ylabel=None)
+        axs[col].patch.set_facecolor('white') 
+        axs[col].set_xticks([0, 0.3, 0.6])
+        axs[col].set_xticklabels([0, 0.3, 0.6])            
+        axs[col].grid(True, which='both', axis='x', color='#FDF4F5')
+        axs[col].xaxis.grid(True)
+        axs[col].set_title(f'{missing_rate*100}%', fontsize=14)
+        for yline in [0.5, 1.5, 2.5]:
+            axs[col].axhline(yline, color='#FFD5E5', linewidth=0.5)
             
-            palette = colors
-            sns.set()
-            
-            im = sns.barplot(y = 'Feature', x='Value', hue='Label', data=df_melted, ax=axs[row, col], 
-                             orient='h', palette=palette, saturation=100, width=0.8 )
-            axs[row, col].legend_.remove()
-            axs[row, col].set(xlabel=None)
-            axs[row, col].patch.set_facecolor('white') 
-            axs[row, col].set_xticks([0, 0.3, 0.6])
-            axs[row, col].set_xticklabels([0, 0.3, 0.6])
-            axs[row, col].grid(True, which='both', axis='x', color='#FDF4F5')
-            #axs[row, col].grid(True, which='both', axis='y', color='#FDF4F5')
-            axs[row, col].xaxis.grid(True)
-            for yline in [0.5, 1.5, 2.5]:
-                axs[row, col].axhline(yline, color='#FFD5E5', linewidth=0.5)
-            
-
-        axs[row,0].set_ylabel(f'{missing_rate*100}%', rotation='horizontal', labelpad = 30)
-        axs[4, 2].set_xlabel('Level of contribution', labelpad = 20, fontsize=14)
-
-    for j in range(len(algs)):
-        axs[0, j].set_title(f'{algs[j]}', fontsize=14)
+        axs[2].set_xlabel('Level of contribution', labelpad = 20, fontsize=14)
 
     lines_labels = [ax.get_legend_handles_labels() for ax in fig.axes]
     lines, labels = [sum(lol, []) for lol in zip(*lines_labels)]
-    fig.legend(lines[:3],labels[:3], loc='lower center', ncol = len(labels), bbox_to_anchor=(0.15,0.06))
+    fig.legend(lines[:3],labels[:3], loc='lower center', ncol = len(labels), bbox_to_anchor=(0.15,-0.08))
     
     # save pic
-    plt.savefig(f'results/plots/shapleyvalues/barplot.png',dpi=300, bbox_inches='tight')
+    plt.savefig(f'src/results/plots/wlda/barplot.png',dpi=300, bbox_inches='tight')
     # plot pic
     
     #plt.show()
 
-def shapley_heatmap(res, colors, column_names, algs, label='class 0'):
-    cmap = LinearSegmentedColormap.from_list('', colors)
-
-    sns.set(rc = {'axes.facecolor': '#F1F1F1', 'figure.facecolor': '#F1F1F1'})
-    # Create a figure with subplots
-    fig, axs = plt.subplots(ncols=6,nrows=5, figsize=(18, 15), sharex=True, sharey=True)
-    xticks = np.arange(0, 150, 30)
-    # Plot each correlation matrix on the appropriate subplot
-    for row, missing_rate in enumerate(res.keys()):
-        matrix = res[missing_rate]
-        for col, model in enumerate(matrix.keys()):
-            f0df = pd.DataFrame(columns=['class 0','class 1', 'class 2'])
-            f1df = pd.DataFrame(columns=['class 0','class 1', 'class 2'])
-            f2df = pd.DataFrame(columns=['class 0','class 1', 'class 2'])
-            f3df = pd.DataFrame(columns=['class 0','class 1', 'class 2'])
-            for i in range(30):        
-                f0df.loc[i] = matrix[model][i][0].tolist()
-                f1df.loc[i] = matrix[model][i][1].tolist()
-                f2df.loc[i] = matrix[model][i][2].tolist()
-                f3df.loc[i] = matrix[model][i][3].tolist()
-            df = pd.concat([f0df.T.loc[label], f1df.T.loc[label], f2df.T.loc[label], f3df.T.loc[label]], axis=1)
-            df.columns = column_names
-            im = sns.heatmap(df.T, cmap=cmap, cbar=False, vmin=-0.5, vmax=0.5, ax=axs[row, col])
-            im.set_xticks([0, 10, 20, 30]) # <--- set the ticks first
-            im.set_xticklabels([0, 10, 20, 30], rotation=0)
-
-        axs[row,0].set_ylabel(f'{missing_rate*100}%', rotation='horizontal', labelpad = 30)
-    
-    cbar_ax = fig.add_axes([.92, .3, .02, .4])
-    fig.colorbar(im.get_children()[0], cax=cbar_ax)
-    
-    for j in range(len(algs)):
-        axs[0, j].set_title(f'{algs[j]}', fontsize=14)
-    
-    # save pic
-    plt.savefig(f'results/plots/shapleyvalues/{label}.png',dpi=300, bbox_inches='tight')
-    # plot pic
-    #plt.show()
-    plt.close()
 
 ################# BOUNDARY DECISION COSINE SIMILARITY ###################
 def boundary_barplot(df, missing_range):
@@ -146,8 +131,9 @@ def boundary_barplot(df, missing_range):
     fig.text(0.5, -0.02, 'Missing rate', ha='center', va='center', fontsize=14)
 
     plt.tight_layout()
-    plt.savefig(f'results/plots/boundarysimilary/boundary.png',dpi=300, bbox_inches='tight')
+    plt.savefig(f'src/results/plots/boundarysimilary/boundary1.png',dpi=300, bbox_inches='tight')
     plt.close()
+
 
 ###################### CORRELATION HEATMAPS ################
 def all_mr_heatmaps(Ss, colors, t='correlation'):

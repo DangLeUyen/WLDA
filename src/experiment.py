@@ -183,12 +183,13 @@ def run_performance_experiment(X, y, missing_rate, runtime, missing_id):
   return res
 
 def shapley_values_experiment(model, X_train, X_test):
+   import shap
    """Return:
         Dictionary: key - class
                     value - average of shapley values of subsamples which are predicted to key value"""
    pred = model.predict(X_test)
    # Create an instance of ShapleyEstimator
-   shapley_estimator = ShapleyEstimator(model, X_train)
+   shapley_estimator = ShapleyEstimator(model.predict_proba, X_train)
    explanation = shapley_estimator.shapley_values_arrays(X_test)
 
    return explanation, pred
@@ -226,12 +227,6 @@ def cov_shap_experiment(X,y,missing_rate):
     m0 = grth_model.get_means()
 
     Xtrain_nan = generate_NaN(X_train,missing_rate)
-
-    #WLDA
-    wlda = WLDA()
-    wlda.fit(Xtrain_nan, y_train)
-    S_wlda = wlda.get_covariance()
-    m_wlda = wlda.get_means()
 
     # KNN
     knn_imputer = KNN(k=np.sqrt(p).astype(int))
@@ -274,6 +269,13 @@ def cov_shap_experiment(X,y,missing_rate):
     S_dimv = dimv_model.get_covariance()
     m_dimv = dimv_model.get_means()
 
+    #WLDA
+    wlda = WLDA()
+    wlda.fit(Xtrain_nan, y_train)
+    #S1_wlda = wlda.get_covariance()
+    S_wlda = wlda.get_weight_covariance(X_test)
+    m_wlda = wlda.get_means()
+
     Ss.append([S0, S_wlda, S_knn, S_mice, S_soft, S_dimv])
     Ms.append([m0, m_wlda, m_knn, m_mice, m_soft, m_dimv])
 
@@ -285,7 +287,7 @@ def cov_shap_experiment(X,y,missing_rate):
     expls['Soft-Impute'], preds['Soft-Impute'] = shapley_values_experiment(soft_model, X_train_soft, X_test)
     expls['DIMV'], preds['DIMV'] = shapley_values_experiment(dimv_model, X_train_dimv, X_test)
 
-    return Ss, Ms, expls, preds
+    return Ss, Ms , expls, preds
 
 def decision_boundary_experiment(cov, means, y): 
     """
@@ -309,14 +311,15 @@ def decision_boundary_experiment(cov, means, y):
     w0s = {}
     for cls1, cls2 in set(list(combinations(classes, 2))):
         mean_diff = means[cls1] - means[cls2]
-        w = np.dot(cov_inv, mean_diff)
+        w = np.round(np.dot(cov_inv, mean_diff),3)
         weights[(cls1, cls2)] = w
 
         # calculate w0
         term1 = np.dot(np.dot(means[cls1],cov_inv), means[cls1])
         term2 = np.dot(np.dot(means[cls2],cov_inv), means[cls2])
-        w0 = 0.5 * (term2 - term1) + np.log(np.sum(y==cls1)/np.sum(y==cls2))
+        w0 = np.round(0.5 * (term2 - term1) + np.log(np.sum(y==cls1)/np.sum(y==cls2)),3)
 
         w0s[(cls1, cls2)] = w0
 
     return w0s, weights
+
