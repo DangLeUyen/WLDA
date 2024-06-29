@@ -1,4 +1,4 @@
-# WLDA - Weighted missing Linear Discriminant Analysis
+# Weighted Missing Linear Discriminant Analysis: An Explainable Approach for Classification with Missing Data
 The code repository associated with the paper: **"Interpretable Linear Discriminant Analysis in the presence of missing data"**
 
 ## 1. Introduction
